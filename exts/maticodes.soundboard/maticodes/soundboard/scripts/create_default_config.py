@@ -1,45 +1,7 @@
-## TODO
-- Create button size setting
-- Allow user sounds
-    - Copy files to data dir
-- Merge user config with default config
-- Allow removing buttons
-- Allow adding buttons from sounds palette
-- Allow button reordering
-- Allow custom colors
-- Edit mode vs perform mode
+import json
+from pathlib import Path
 
-```
-{
-    "active_sounds": ["Sound 1", "Sound 2"],
-    "sounds_repo": {
-        "Sound 1": {
-            # default config uses token paths
-            # user config uses absolute paths
-            "uri": "/some/file/path.wav"
-            "color": [1.0, 1.0, 1.0]
-        },
-        ...
-    }
-}
-```
-
-```
-class ConfigManager:
-    resolved_config = {}
-
-    @staticmethod
-    def load_config():
-        pass
-    
-
-
-```
-
-```
-class SoundSlot:
-
-```
+config_path = Path(__file__).parent.parent.parent.parent / "data" / "default_config.json"
 
 sounds = {
     "Applause": {
@@ -88,3 +50,11 @@ sounds = {
         "uri": "data/sounds/yes_scream.wav"
     },
 }
+
+config = {
+    "active_sounds": [key for key in sounds],
+    "sounds_repo": sounds
+}
+
+with open(config_path, "w") as f:
+    json.dump(config, f, indent=4)

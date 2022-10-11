@@ -27,10 +27,14 @@ preview_image = "data/preview.png"
 # Use omni.ui to build simple UI
 [dependencies]
 "omni.kit.uiapp" = {}
+"omni.uiaudio" = {}
 
 # Main python module this extension provides, it will be publicly available as "import maticodes.soundboard".
 [[python.module]]
 name = "maticodes.soundboard"
+
+[settings]
+exts."maticodes.soundboard".button_width = 300
 
 [[test]]
 # Extra dependencies only to be used during test run
