@@ -1,8 +1,11 @@
 
+# SPDX-License-Identifier: Apache-2.0
+
 import json
 from pathlib import Path
 
 import omni.kit.app
+
 
 class ConfigManager:
     resolved_config = {}

@@ -1,10 +1,8 @@
 # SPDX-License-Identifier: Apache-2.0
-from pathlib import Path
 
 import omni.ext
-import omni.kit.uiaudio
-import omni.ui as ui
 import omni.kit.app
+import omni.kit.uiaudio
 
 from .window import Soundboard
 

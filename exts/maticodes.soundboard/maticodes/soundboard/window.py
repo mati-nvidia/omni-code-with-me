@@ -1,5 +1,7 @@
+# SPDX-License-Identifier: Apache-2.0
 
 import carb.settings
+import omni.kit.commands
 import omni.kit.uiaudio
 import omni.ui as ui
 
@@ -20,15 +22,29 @@ class Soundboard(ui.Window):
     def build_window(self):
         button_width = self._settings.get("exts/maticodes.soundboard/button_width")
         with ui.VGrid(column_width=button_width):
+
             def on_click(sound_name):
                 self._audio_iface.play_sound(self._sounds[sound_name])
-       
+
             for sound_name in ConfigManager.resolved_config["active_sounds"]:
-                ui.Button(sound_name, height=button_width, width=button_width, 
-                    clicked_fn=lambda sound_name=sound_name: on_click(sound_name))
-    
+                ui.Button(
+                    sound_name,
+                    height=button_width,
+                    width=button_width,
+                    clicked_fn=lambda sound_name=sound_name: on_click(sound_name),
+                )
+
     def load_sounds(self):
         for sound_name in ConfigManager.resolved_config["active_sounds"]:
             sound_data = ConfigManager.resolved_config["sounds_repo"][sound_name]
             sound = self._audio_iface.create_sound(sound_data["uri"])
-            self._sounds[sound_name] = sound
+
+            prim_path = f"/World/{sound_name}"
+            omni.kit.commands.execute(
+                "CreatePrimWithDefaultXform",
+                prim_type="Sound",
+                prim_path=prim_path,
+                attributes={"auralMode": "nonSpatial", "filePath": sound_data["uri"]},
+            )
+
+            self._sounds[sound_name] = prim_path
