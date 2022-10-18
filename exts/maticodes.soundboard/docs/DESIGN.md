@@ -1,7 +1,9 @@
 ## TODO
 - Create button size setting
+  - Check if persistent exists, else fallback.
+  - Subscribe to setting changes
 - Allow user sounds
-    - Copy files to data dir
+  - Copy files to data dir
 - Merge user config with default config
 - Allow removing buttons
 - Allow adding buttons from sounds palette

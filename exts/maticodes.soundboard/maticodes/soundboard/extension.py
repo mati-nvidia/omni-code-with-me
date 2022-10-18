@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
+from .config import SettingsManager
 import omni.ext
 import omni.kit.app
 import omni.kit.uiaudio
@@ -16,10 +17,12 @@ class MyExtension(omni.ext.IExt):
     def on_startup(self, ext_id):
         print("[maticodes.soundboard] MyExtension startup")
         
-        self._window = Soundboard("Soundboard", ext_id, width=500, height=500)
-
+        self.setting_man = SettingsManager()
+        self._window = Soundboard("Soundboard", ext_id, settings=self.setting_man, width=500, height=500)
+        
 
     def on_shutdown(self):
         print("[maticodes.soundboard] MyExtension shutdown")
+        self.setting_man.save_settings()
         self._window.destroy()
         self._window = None
