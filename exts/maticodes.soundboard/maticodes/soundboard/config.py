@@ -1,6 +1,7 @@
 
 # SPDX-License-Identifier: Apache-2.0
 
+import copy
 import json
 import os
 from pathlib import Path
@@ -11,7 +12,6 @@ import omni.kit.app
 
 
 class ConfigManager:
-    resolved_config = {}
     default_config = {}
     user_config = {}
     default_config_path = "data/default_config.json"
@@ -32,7 +32,6 @@ class ConfigManager:
             abs_path = Path(ext_root_path) / data["sounds_repo"][sound_name]["uri"]
             data["sounds_repo"][sound_name]["uri"] = str(abs_path)
         cls.default_config = data
-        cls.resolved_config.update(data)
 
     @classmethod
     def load_user_config(cls, filepath: Path):
@@ -43,7 +42,6 @@ class ConfigManager:
 
         data = cls._read_json(filepath)
         cls.user_config = data
-        cls.resolved_config.update(data)
     
     @classmethod
     def save_user_config(cls, filepath: Path):
@@ -54,6 +52,17 @@ class ConfigManager:
     @classmethod
     def _resolve_path(cls, filepath):
         return carb.tokens.get_tokens_interface().resolve(str(filepath))
+    
+    @classmethod
+    def resolved_config(cls):
+        resolved_config = {}
+        resolved_config.update(cls.default_config)
+        resolved_config.update(cls.user_config)
+        sounds_repo = copy.deepcopy(cls.default_config["sounds_repo"])
+        sounds_repo.update(cls.user_config["sounds_repo"])
+        resolved_config["sounds_repo"] = sounds_repo
+        return resolved_config
+
 
 
 class SettingKeys:
