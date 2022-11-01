@@ -64,14 +64,22 @@ class ConfigManager:
         return resolved_config
 
 
+class TransientSettings:
+    EDIT_MODE = "/exts/maticodes.soundboard/edit_mode"
 
-class SettingKeys:
+
+class PersistentSettings:
     BUTTON_WIDTH = "/exts/maticodes.soundboard/button_width"
 
     @classmethod
-    def get_keys(cls):
+    def get_persistent_keys(cls):
         attrs = [attr for attr in dir(cls) if not callable(getattr(cls, attr)) and not attr.startswith("__")]
         return [getattr(cls, attr) for attr in attrs]
+
+
+class Settings(PersistentSettings, TransientSettings):
+    pass
+
 
 class SettingsManager:
     PERSISTENT = "/persistent"
@@ -81,14 +89,14 @@ class SettingsManager:
         self._load_settings()
     
     def _load_settings(self):
-        for key in SettingKeys.get_keys():
+        for key in PersistentSettings.get_persistent_keys():
             value = self._settings.get(self.PERSISTENT + key)
             if value is not None:
                 self._settings.set(key, value)
 
     
     def save_settings(self):
-        for key in SettingKeys.get_keys():
+        for key in PersistentSettings.get_persistent_keys():
             value = self._settings.get(key)
             self._settings.set(self.PERSISTENT + key, value)
     

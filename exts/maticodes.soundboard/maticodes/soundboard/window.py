@@ -2,6 +2,7 @@
 
 import copy
 import shutil
+from functools import partial
 from pathlib import Path
 from typing import List
 
@@ -11,12 +12,9 @@ import omni.kit.uiaudio
 import omni.ui as ui
 from omni.kit.window.drop_support import ExternalDragDrop
 
-from .config import ConfigManager, SettingKeys
-from .constants import REORDER_EVENT
+from .config import ConfigManager, Settings
+from .constants import DATA_DIR, REORDER_EVENT, USER_CONFIG_PATH, GUTTER_WIDTH
 from .widgets import ButtonSlot
-
-DATA_DIR = Path("${omni_data}/exts/maticodes.soundboard")
-USER_CONFIG_PATH = DATA_DIR / "user.config"
 
 
 class Soundboard(ui.Window):
@@ -30,9 +28,8 @@ class Soundboard(ui.Window):
         self._audio_iface = omni.kit.uiaudio.get_ui_audio_interface()
         self.load_sounds()
         self._setting_man = settings
-        self._settings_sub = self._setting_man._settings.subscribe_to_node_change_events(SettingKeys.BUTTON_WIDTH, self._on_settings_changed)
-        ConfigManager.user_config["foo"] = "bar"
-        ConfigManager.save_user_config(USER_CONFIG_PATH)
+        self._settings_sub = self._setting_man._settings.subscribe_to_node_change_events(Settings.BUTTON_WIDTH, self._on_settings_changed)
+        self._settings_sub = self._setting_man._settings.subscribe_to_node_change_events(Settings.EDIT_MODE, self._on_edit_changed)
         self._external_drag_and_drop = None
         bus = omni.kit.app.get_app().get_message_bus_event_stream()
         self._reorder_sub = bus.create_subscription_to_push_by_type(REORDER_EVENT, self._on_reorder)
@@ -41,20 +38,34 @@ class Soundboard(ui.Window):
     def _on_reorder(self, e):
         self.frame.rebuild()
 
+    def _on_edit_changed(self, item, event_type):
+        self.frame.rebuild()
+
     def build_window(self):
-        button_width = self._setting_man.get(SettingKeys.BUTTON_WIDTH)
+        button_width = self._setting_man.get(Settings.BUTTON_WIDTH)
+        edit_mode = self._setting_man.get(Settings.EDIT_MODE)
         with ui.VStack():
             # def slider_changed(model):
             #     self._setting_man._settings.set("/exts/maticodes.soundboard/button_width", model.as_float)
             # model = ui.SimpleFloatModel(self._setting_man._settings.get("/exts/maticodes.soundboard/button_width"))
             # self._sub_slider = model.subscribe_value_changed_fn(slider_changed)
             # ui.FloatSlider(model, min=50, max=400, step=1)
-            with ui.VGrid(column_width=button_width + 10):
+            with ui.HStack(height=0):
+                ui.Spacer()
+                def set_edit_mode(button):
+                    button.checked = not button.checked
+                    if not button.checked:
+                        ConfigManager.save_user_config(USER_CONFIG_PATH)
+                    self._setting_man.set(Settings.EDIT_MODE, button.checked)
+                button = ui.Button(text="Edit", height=0, width=0, checked=edit_mode)
+                button.set_clicked_fn(partial(set_edit_mode, button))
+            gutter_offset = GUTTER_WIDTH if edit_mode else 0
+            with ui.VGrid(column_width=button_width + gutter_offset):
                 
                 for sound_name in ConfigManager.resolved_config()["active_sounds"]:
                     ButtonSlot(sound_name, 
                         self._sounds[sound_name],
-                        button_width, edit=True)
+                        button_width)
 
                 if self._external_drag_and_drop:
                     self._external_drag_and_drop.destroy()

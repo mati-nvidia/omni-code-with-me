@@ -36,6 +36,7 @@ name = "maticodes.soundboard"
 
 [settings]
 exts."maticodes.soundboard".button_width = 300
+exts."maticodes.soundboard".edit_mode = false
 
 [[test]]
 # Extra dependencies only to be used during test run
