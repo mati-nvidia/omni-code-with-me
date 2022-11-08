@@ -14,11 +14,11 @@ from omni.kit.window.drop_support import ExternalDragDrop
 
 from .config import ConfigManager, Settings
 from .constants import DATA_DIR, REORDER_EVENT, USER_CONFIG_PATH, GUTTER_WIDTH
-from .widgets import ButtonSlot
+from .widgets import ButtonSlot, PaletteSlot
 
 
 class Soundboard(ui.Window):
-    def __init__(self, title, ext_id, settings, **kwargs):
+    def __init__(self, title, ext_id, **kwargs):
         super().__init__(title, **kwargs)
         self.ext_id = ext_id
         
@@ -26,14 +26,14 @@ class Soundboard(ui.Window):
         ConfigManager.load_default_config(self.ext_id)
         ConfigManager.load_user_config(USER_CONFIG_PATH)
         self._audio_iface = omni.kit.uiaudio.get_ui_audio_interface()
-        self.load_sounds()
-        self._setting_man = settings
-        self._settings_sub = self._setting_man._settings.subscribe_to_node_change_events(Settings.BUTTON_WIDTH, self._on_settings_changed)
-        self._settings_sub = self._setting_man._settings.subscribe_to_node_change_events(Settings.EDIT_MODE, self._on_edit_changed)
+        self._load_sounds()
+        self._settings = carb.settings.get_settings()
+        self._settings_sub = self._settings.subscribe_to_node_change_events(Settings.BUTTON_WIDTH, self._on_settings_changed)
+        self._edit_sub = self._settings.subscribe_to_node_change_events(Settings.EDIT_MODE, self._on_edit_changed)
         self._external_drag_and_drop = None
         bus = omni.kit.app.get_app().get_message_bus_event_stream()
         self._reorder_sub = bus.create_subscription_to_push_by_type(REORDER_EVENT, self._on_reorder)
-        self.frame.set_build_fn(self.build_window)
+        self.frame.set_build_fn(self._build_window)
 
     def _on_reorder(self, e):
         self.frame.rebuild()
@@ -41,13 +41,13 @@ class Soundboard(ui.Window):
     def _on_edit_changed(self, item, event_type):
         self.frame.rebuild()
 
-    def build_window(self):
-        button_width = self._setting_man.get(Settings.BUTTON_WIDTH)
-        edit_mode = self._setting_man.get(Settings.EDIT_MODE)
+    def _build_window(self):
+        button_width = self._settings.get(Settings.BUTTON_WIDTH)
+        edit_mode = self._settings.get(Settings.EDIT_MODE)
         with ui.VStack():
             # def slider_changed(model):
             #     self._setting_man._settings.set("/exts/maticodes.soundboard/button_width", model.as_float)
-            # model = ui.SimpleFloatModel(self._setting_man._settings.get("/exts/maticodes.soundboard/button_width"))
+            # model = ui.SimpleFloatModel(self._settings.get("/exts/maticodes.soundboard/button_width"))
             # self._sub_slider = model.subscribe_value_changed_fn(slider_changed)
             # ui.FloatSlider(model, min=50, max=400, step=1)
             with ui.HStack(height=0):
@@ -56,32 +56,47 @@ class Soundboard(ui.Window):
                     button.checked = not button.checked
                     if not button.checked:
                         ConfigManager.save_user_config(USER_CONFIG_PATH)
-                    self._setting_man.set(Settings.EDIT_MODE, button.checked)
+                    self._settings.set(Settings.EDIT_MODE, button.checked)
                 button = ui.Button(text="Edit", height=0, width=0, checked=edit_mode)
                 button.set_clicked_fn(partial(set_edit_mode, button))
             gutter_offset = GUTTER_WIDTH if edit_mode else 0
-            with ui.VGrid(column_width=button_width + gutter_offset):
-                
-                for sound_name in ConfigManager.resolved_config()["active_sounds"]:
-                    ButtonSlot(sound_name, 
-                        self._sounds[sound_name],
-                        button_width)
+            with ui.ScrollingFrame(
+                horizontal_scrollbar_policy=ui.ScrollBarPolicy.SCROLLBAR_ALWAYS_OFF,
+                vertical_scrollbar_policy=ui.ScrollBarPolicy.SCROLLBAR_ALWAYS_ON,
+            ):
+                with ui.VGrid(column_width=button_width + gutter_offset):
+                    for sound_name in ConfigManager.resolved_config()["active_sounds"]:
+                        ButtonSlot(sound_name, 
+                            self._sounds[sound_name],
+                            width=button_width, height=button_width)
+            
+            if edit_mode:
+                with ui.ScrollingFrame(
+                    horizontal_scrollbar_policy=ui.ScrollBarPolicy.SCROLLBAR_ALWAYS_ON,
+                    vertical_scrollbar_policy=ui.ScrollBarPolicy.SCROLLBAR_ALWAYS_OFF,
+                    height=75
+                ):    
+                    with ui.HStack(spacing=5):
+                        for sound_name, sound_data in ConfigManager.resolved_config()["sounds_repo"].items():
+                            sound = self._load_sound(sound_name, sound_data["uri"])
+                            PaletteSlot(sound_name, sound, width=button_width, height=50)
 
-                if self._external_drag_and_drop:
-                    self._external_drag_and_drop.destroy()
-                    self._external_drag_and_drop = None
-                self._external_drag_and_drop = ExternalDragDrop(window_name=self.title,
-                                                            drag_drop_fn=self._on_ext_drag_drop)
+        if self._external_drag_and_drop:
+            self._external_drag_and_drop.destroy()
+            self._external_drag_and_drop = None
+            self._external_drag_and_drop = ExternalDragDrop(window_name=self.title,
+                                                        drag_drop_fn=self._on_ext_drag_drop)
 
-    def load_sounds(self):
+
+    def _load_sounds(self):
         for sound_name in ConfigManager.resolved_config()["active_sounds"]:
-            conf = ConfigManager.resolved_config()
             sound_data = ConfigManager.resolved_config()["sounds_repo"][sound_name]
-            self.load_sound(sound_name, sound_data["uri"])
+            sound = self._load_sound(sound_name, sound_data["uri"])
+            self._sounds[sound_name] = sound
     
-    def load_sound(self, name, filepath):
-        sound = self._audio_iface.create_sound(filepath)
-        self._sounds[name] = sound
+    def _load_sound(self, name, filepath):
+        return self._audio_iface.create_sound(filepath)
+        
     
     def _on_settings_changed(self, item, event_type):
         self.frame.rebuild()
@@ -95,24 +110,33 @@ class Soundboard(ui.Window):
                     dest = DATA_DIR / filepath.name
                     dest = carb.tokens.get_tokens_interface().resolve(str(dest))
                     shutil.copy(filepath, dest)
-                    self.load_sound(filepath.stem, dest)
-                    active_sounds = copy.deepcopy(ConfigManager.resolved_config()["active_sounds"])
-                    active_sounds.append(filepath.stem)
-                    ConfigManager.user_config["active_sounds"] = active_sounds
-                    if not ConfigManager.user_config.get("sounds_repo"):
-                        ConfigManager.user_config["sounds_repo"] = {}
-                    ConfigManager.user_config["sounds_repo"][filepath.stem] = {
-                        "uri": dest
-                    }
+                    self._load_sound(filepath.stem, dest)
+                    self._add_sound_to_config(filepath.stem, dest)
+                    
         ConfigManager.save_user_config(USER_CONFIG_PATH)
         self.frame.rebuild()
 
+    def _add_sound_to_config(self, sound_name, file_path):
+        active_sounds = copy.deepcopy(ConfigManager.resolved_config()["active_sounds"])
+        active_sounds.append(sound_name)
+        ConfigManager.user_config["active_sounds"] = active_sounds
+        if not ConfigManager.user_config.get("sounds_repo"):
+            ConfigManager.user_config["sounds_repo"] = {}
+        ConfigManager.user_config["sounds_repo"][sound_name] = {
+            "uri": file_path
+        }
 
     def destroy(self) -> None:
-        self._settings_sub = None
-        self._sub_slider = None
-        self._setting_man = None
-        self._reorder_sub = None
+        if self._settings_sub:
+            self._settings.unsubscribe_to_change_events(self._settings_sub)
+            self._settings_sub = None
+        if self._edit_sub:
+            self._settings.unsubscribe_to_change_events(self._edit_sub)
+            self._edit_sub = None
+        # self._sub_slider = None
+        if self._reorder_sub:
+            self._reorder_sub.unsubscribe()
+            self._reorder_sub = None
         if self._external_drag_and_drop:
             self._external_drag_and_drop.destroy()
             self._external_drag_and_drop = None

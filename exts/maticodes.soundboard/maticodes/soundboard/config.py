@@ -99,9 +99,7 @@ class SettingsManager:
         for key in PersistentSettings.get_persistent_keys():
             value = self._settings.get(key)
             self._settings.set(self.PERSISTENT + key, value)
-    
-    def get(self, key):
-        return self._settings.get(key)
-    
-    def set(self, key, value):
-        return self._settings.set(key, value)
+
+    @property
+    def settings(self):
+        return self._settings

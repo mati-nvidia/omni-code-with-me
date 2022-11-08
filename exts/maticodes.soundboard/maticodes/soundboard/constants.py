@@ -7,4 +7,4 @@ REORDER_EVENT = carb.events.type_from_string("maticodes.soundboard.BUTTONS_REORD
 
 DATA_DIR = Path("${omni_data}/exts/maticodes.soundboard")
 USER_CONFIG_PATH = DATA_DIR / "user.config"
-GUTTER_WIDTH = 32
+GUTTER_WIDTH = 24

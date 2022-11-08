@@ -14,14 +14,10 @@ class MyExtension(omni.ext.IExt):
     # ext_id is current extension id. It can be used with extension manager to query additional information, like where
     # this extension is located on filesystem.
     def on_startup(self, ext_id):
-        print("[maticodes.soundboard] MyExtension startup")
-
-        self.setting_man = SettingsManager()
-        self._window = Soundboard("Soundboard4", ext_id, settings=self.setting_man, width=500, height=500)
+        self.settings_mgr = SettingsManager()
+        self._window = Soundboard("Soundboard", ext_id, width=500, height=500)
         
     def on_shutdown(self):
-        print("[maticodes.soundboard] MyExtension shutdown")
-        self.setting_man.save_settings()
-        self.setting_man = None
+        self.settings_mgr.save_settings()
         self._window.destroy()
         self._window = None
