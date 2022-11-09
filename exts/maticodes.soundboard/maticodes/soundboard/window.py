@@ -13,7 +13,7 @@ import omni.ui as ui
 from omni.kit.window.drop_support import ExternalDragDrop
 
 from .config import ConfigManager, Settings
-from .constants import DATA_DIR, REORDER_EVENT, USER_CONFIG_PATH, GUTTER_WIDTH
+from .constants import DATA_DIR, REORDER_EVENT, SOUNDS_CHANGED_EVENT, USER_CONFIG_PATH, GUTTER_WIDTH
 from .widgets import ButtonSlot, PaletteSlot
 
 
@@ -33,15 +33,23 @@ class Soundboard(ui.Window):
         self._external_drag_and_drop = None
         bus = omni.kit.app.get_app().get_message_bus_event_stream()
         self._reorder_sub = bus.create_subscription_to_push_by_type(REORDER_EVENT, self._on_reorder)
+        self._sounds_changed_sub = bus.create_subscription_to_push_by_type(SOUNDS_CHANGED_EVENT, self._on_sounds_changed)
         self.frame.set_build_fn(self._build_window)
 
     def _on_reorder(self, e):
+        print("Reorder event")
         self.frame.rebuild()
-
+    
+    def _on_sounds_changed(self, e):
+        print("Sounds Changed event")
+        self._load_sounds()
+        self.frame.rebuild()
+        
     def _on_edit_changed(self, item, event_type):
         self.frame.rebuild()
 
     def _build_window(self):
+        print("Rebuild")
         button_width = self._settings.get(Settings.BUTTON_WIDTH)
         edit_mode = self._settings.get(Settings.EDIT_MODE)
         with ui.VStack():
@@ -75,26 +83,33 @@ class Soundboard(ui.Window):
                     horizontal_scrollbar_policy=ui.ScrollBarPolicy.SCROLLBAR_ALWAYS_ON,
                     vertical_scrollbar_policy=ui.ScrollBarPolicy.SCROLLBAR_ALWAYS_OFF,
                     height=75
-                ):    
-                    with ui.HStack(spacing=5):
-                        for sound_name, sound_data in ConfigManager.resolved_config()["sounds_repo"].items():
-                            sound = self._load_sound(sound_name, sound_data["uri"])
-                            PaletteSlot(sound_name, sound, width=button_width, height=50)
+                ):  
+                    with ui.ZStack():
+                        ui.Rectangle(style={"background_color": ui.color.black})
+                        with ui.VStack():
+                            # ui.Spacer(height=5)
+                            with ui.HStack(style={"margin": 2}):
+                                for sound_name, sound_data in ConfigManager.resolved_config()["sounds_repo"].items():
+                                    sound = self._load_sound(sound_data["uri"])
+                                    PaletteSlot(sound_name, sound, width=button_width, height=50)
 
-        if self._external_drag_and_drop:
-            self._external_drag_and_drop.destroy()
-            self._external_drag_and_drop = None
-            self._external_drag_and_drop = ExternalDragDrop(window_name=self.title,
-                                                        drag_drop_fn=self._on_ext_drag_drop)
-
-
+                if self._external_drag_and_drop:
+                    self._external_drag_and_drop.destroy()
+                    self._external_drag_and_drop = None
+                self._external_drag_and_drop = ExternalDragDrop(window_name=self.title,
+                                                            drag_drop_fn=self._on_ext_drag_drop)
+            elif self._external_drag_and_drop:
+                self._external_drag_and_drop.destroy()
+                self._external_drag_and_drop = None
+    
     def _load_sounds(self):
+        self._sounds = {}
         for sound_name in ConfigManager.resolved_config()["active_sounds"]:
             sound_data = ConfigManager.resolved_config()["sounds_repo"][sound_name]
-            sound = self._load_sound(sound_name, sound_data["uri"])
+            sound = self._load_sound(sound_data["uri"])
             self._sounds[sound_name] = sound
     
-    def _load_sound(self, name, filepath):
+    def _load_sound(self, filepath):
         return self._audio_iface.create_sound(filepath)
         
     
@@ -110,7 +125,7 @@ class Soundboard(ui.Window):
                     dest = DATA_DIR / filepath.name
                     dest = carb.tokens.get_tokens_interface().resolve(str(dest))
                     shutil.copy(filepath, dest)
-                    self._load_sound(filepath.stem, dest)
+                    self._sounds[filepath.stem] = self._load_sound(dest)
                     self._add_sound_to_config(filepath.stem, dest)
                     
         ConfigManager.save_user_config(USER_CONFIG_PATH)
@@ -137,6 +152,9 @@ class Soundboard(ui.Window):
         if self._reorder_sub:
             self._reorder_sub.unsubscribe()
             self._reorder_sub = None
+        if self._sounds_changed_sub:
+            self._sounds_changed_sub.unsubscribe()
+            self._sounds_changed_sub = None
         if self._external_drag_and_drop:
             self._external_drag_and_drop.destroy()
             self._external_drag_and_drop = None

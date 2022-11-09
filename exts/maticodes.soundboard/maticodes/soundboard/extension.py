@@ -15,7 +15,7 @@ class MyExtension(omni.ext.IExt):
     # this extension is located on filesystem.
     def on_startup(self, ext_id):
         self.settings_mgr = SettingsManager()
-        self._window = Soundboard("Soundboard", ext_id, width=500, height=500)
+        self._window = Soundboard("Soundboard", ext_id, width=800, height=500)
         
     def on_shutdown(self):
         self.settings_mgr.save_settings()

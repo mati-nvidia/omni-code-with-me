@@ -41,7 +41,7 @@
             "uri": "data/sounds/phone_ring_analog.wav"
         },
         "Phone Ringing 2": {
-            "uri": "data/sounds/phone_ringing_digital.wav"
+            "uri": "data/sounds/phone_ring_digital.wav"
         },
         "Rooster Crowing": {
             "uri": "data/sounds/rooster_crowing.wav"
@@ -50,7 +50,7 @@
             "uri": "data/sounds/thank_you.wav"
         },
         "Timer": {
-            "uri": "data/sounds/timer.wav"
+            "uri": "data/sounds/timer.mp3"
         },
         "Woohoo": {
             "uri": "data/sounds/woohoo.wav"

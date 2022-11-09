@@ -4,6 +4,7 @@ from pathlib import Path
 import carb
 
 REORDER_EVENT = carb.events.type_from_string("maticodes.soundboard.BUTTONS_REORDERED")
+SOUNDS_CHANGED_EVENT = carb.events.type_from_string("maticodes.soundboard.SOUNDS_CHANGED")
 
 DATA_DIR = Path("${omni_data}/exts/maticodes.soundboard")
 USER_CONFIG_PATH = DATA_DIR / "user.config"

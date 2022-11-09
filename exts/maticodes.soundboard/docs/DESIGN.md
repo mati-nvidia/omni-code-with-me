@@ -1,14 +1,8 @@
 ## TODO
-- Sound palette to re-add sounds
-- Rename button popup
-- You can only add buttons in edit mode
 - provide a way to change button width
 - Styling pass
     - edit bar
-    - sounds buttons
-    - change mouse cursor when dragging
-    - button hover style
-- Remove button context menu
+- docstrings and README
 
 
 ```

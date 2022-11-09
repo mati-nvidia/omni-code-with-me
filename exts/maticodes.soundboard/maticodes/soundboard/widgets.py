@@ -10,7 +10,7 @@ import omni.kit.uiaudio
 from omni import ui
 
 from .config import ConfigManager, Settings
-from .constants import REORDER_EVENT, GUTTER_WIDTH, USER_CONFIG_PATH
+from .constants import REORDER_EVENT, GUTTER_WIDTH, SOUNDS_CHANGED_EVENT, USER_CONFIG_PATH
 from .style import slot_style
 
 
@@ -34,10 +34,7 @@ class ButtonSlot:
         with ui.HStack(style=slot_style):
             if self._settings.get(Settings.EDIT_MODE):
                 with ui.ZStack(width=0, height=0):
-                    ui.Rectangle(width=GUTTER_WIDTH, 
-                        height=100, 
-                        name="edit_bar"
-                    )
+                    ui.Rectangle(width=GUTTER_WIDTH, height=110, name="edit_bar")
                     with ui.VStack():
                         def drag(sound_name):
                             return sound_name
@@ -46,12 +43,14 @@ class ButtonSlot:
                         img.set_drag_fn(lambda: drag(self.sound_name))
                         with ui.HStack():
                             ui.Spacer()
-                            color = ConfigManager.resolved_config()["sounds_repo"][self.sound_name].get("color", [0.1, 0.1, 0.1])
+                            color = ConfigManager.resolved_config()["sounds_repo"][self.sound_name].get("color", [0.15, 0.15, 0.15])
                             self.color_model = ui.ColorWidget(*color, width=0, height=0).model
                             self.color_sub = self.color_model.subscribe_end_edit_fn(self._on_color_changed)
                             ui.Spacer()
-                        ui.Button("E", width=GUTTER_WIDTH, height=GUTTER_WIDTH, clicked_fn=self._rename_button)
-                        ui.Button("X", width=GUTTER_WIDTH, height=GUTTER_WIDTH, clicked_fn=self._remove_button)
+                        ui.Button("", width=GUTTER_WIDTH, height=GUTTER_WIDTH, clicked_fn=self._rename_button,
+                            image_url=carb.tokens.get_tokens_interface().resolve("${glyphs}/pencil.svg"))
+                        ui.Button("", width=GUTTER_WIDTH, height=GUTTER_WIDTH, clicked_fn=self._remove_button,
+                            image_url=carb.tokens.get_tokens_interface().resolve("${glyphs}/trash.svg"))
             self.button_frame = ui.Frame(width=self.width, height=self.height)
             self.button_frame.set_build_fn(self._build_button)
     
@@ -76,9 +75,16 @@ class ButtonSlot:
         self.button_frame.rebuild()
 
     def _build_button(self):
-        color = ConfigManager.resolved_config()["sounds_repo"][self.sound_name].get("color", [0.1, 0.1, 0.1])
+        color = ConfigManager.resolved_config()["sounds_repo"][self.sound_name].get("color", [0.15, 0.15, 0.15])
         button_color = {
-            "background_color": ui.color(*color)
+            "": {
+                "background_color": ui.color(*[c * 0.5 for c in color]),
+                "background_gradient_color": ui.color(*color),
+            },
+            ":hovered": {
+                "background_color": ui.color(*[c * 0.75 for c in color]),
+                "background_gradient_color": ui.color(*[c * 1.1 for c in color]),
+            },
         }
         def on_click():
             self._audio_iface.play_sound(self.sound)
@@ -127,7 +133,7 @@ class ButtonSlot:
 class RenameWindow(ui.Window):
     title = "Rename Sound"
     def __init__(self, sound_name, **kwargs) -> None:
-        super().__init__(self.title, flags=ui.WINDOW_FLAGS_MODAL, width=300, height=200, **kwargs)
+        super().__init__(self.title, flags=ui.WINDOW_FLAGS_MODAL, width=200, height=100, **kwargs)
         self.sound_name = sound_name
         self.name_model = None
         self.msg_bus = omni.kit.app.get_app().get_message_bus_event_stream()
@@ -135,7 +141,7 @@ class RenameWindow(ui.Window):
     
     def _build_frame(self):
         with ui.VStack():
-            self.name_model = ui.StringField().model
+            self.name_model = ui.StringField(height=0).model
             self.name_model.set_value(self.sound_name)
             def close_window():
                 async def close_async():
@@ -148,12 +154,11 @@ class RenameWindow(ui.Window):
                 if new_name in sounds_repo:
                     return
                 active_sounds = copy.deepcopy(ConfigManager.resolved_config()["active_sounds"])
+                index = active_sounds.index(self.sound_name)
                 active_sounds.remove(self.sound_name)
-                active_sounds.append(new_name)
+                active_sounds.insert(index, new_name)
                 data = sounds_repo[self.sound_name]
                 user_sounds_repo = copy.deepcopy(ConfigManager.user_config["sounds_repo"])
-                if self.sound_name in ConfigManager.default_config["sounds_repo"]:
-                    data["active"] = False
                 if self.sound_name in user_sounds_repo:
                     del user_sounds_repo[self.sound_name]
 
@@ -161,12 +166,12 @@ class RenameWindow(ui.Window):
                 user_sounds_repo[new_name] = data
                 ConfigManager.user_config["sounds_repo"] = user_sounds_repo
                 ConfigManager.save_user_config(USER_CONFIG_PATH)
-                self.msg_bus.push(REORDER_EVENT)
+                self.msg_bus.push(SOUNDS_CHANGED_EVENT)
                 close_window()
-            
+            ui.Spacer(height=10)
             with ui.HStack():
-                ui.Button("Ok", clicked_fn=rename_button)
-                ui.Button("Cancel", clicked_fn=close_window)
+                ui.Button("Ok", height=0, clicked_fn=rename_button)
+                ui.Button("Cancel", height=0, clicked_fn=close_window)
 
 class PaletteSlot:
     def __init__(self, sound_name, sound, width, height) -> None:
@@ -184,19 +189,21 @@ class PaletteSlot:
         color = ConfigManager.resolved_config()["sounds_repo"][self.sound_name].get("color", [0.1, 0.1, 0.1])
         style = {
             "background_color": ui.color(*color),
-            "border_radius": 5
+            "border_radius": 3
         }
         with ui.ZStack():
             ui.Rectangle(style=style)
-            with ui.HStack(style=slot_style):
-                def on_click():
+            with ui.HStack(style=slot_style, width=0):
+                def on_play():
                     self._audio_iface.play_sound(self.sound)
                 ui.Label(self.sound_name, alignment=ui.Alignment.CENTER)
                 with ui.VStack():
-                    ui.Spacer(height=12)
+                    ui.Spacer(height=1)
                     with ui.HStack():
-                        ui.Button("Play", width=0, height=0, clicked_fn=on_click)
-                        ui.Button("Add", width=0, height=0, clicked_fn=self._add_active_sound)
+                        ui.Button("", width=24, height=24, clicked_fn=on_play,
+                            image_url=carb.tokens.get_tokens_interface().resolve("${glyphs}/timeline_play.svg"))
+                        ui.Button("", width=24, height=24, clicked_fn=self._add_active_sound,
+                            image_url=carb.tokens.get_tokens_interface().resolve("${glyphs}/plus.svg"))
 
 
     def _add_active_sound(self):
@@ -205,6 +212,6 @@ class PaletteSlot:
             active_sounds.append(self.sound_name)
             ConfigManager.user_config["active_sounds"] = active_sounds
             ConfigManager.save_user_config(USER_CONFIG_PATH)
-            self.msg_bus.push(REORDER_EVENT)
+            self.msg_bus.push(SOUNDS_CHANGED_EVENT)
             
         
