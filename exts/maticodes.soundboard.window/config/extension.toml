@@ -3,26 +3,26 @@
 version = "1.0.0"
 
 # The title and description fields are primarily for displaying extension info in UI
-title = "Simple UI Extension Template"
-description="The simplest python extension example. Use it as a starting point for your extensions."
+title = "Soundboard Window"
+description="A sound effects soundboard. Just for fun and for learning."
 
 # Path (relative to the root) or content of readme markdown file for UI.
 readme  = "docs/README.md"
 
 # URL of the extension source repository.
-repository = ""
+repository = "https://github.com/mati-nvidia/omni-code-with-me"
 
 # One of categories for UI.
-category = "Example"
+category = "Audio"
 
 # Keywords for the extension
-keywords = ["kit", "example"]
+keywords = ["kit", "sound", "example", "audio"]
 
 # Icon to show in the extension manager
 icon = "data/icon.png"
 
 # Preview to show in the extension manager
-preview_image = "data/preview.png"
+preview_image = "data/soundboard_preview.png"
 
 # Use omni.ui to build simple UI
 [dependencies]
@@ -30,13 +30,13 @@ preview_image = "data/preview.png"
 "omni.uiaudio" = {}
 "omni.kit.window.drop_support" = {}
 
-# Main python module this extension provides, it will be publicly available as "import maticodes.soundboard".
+# Main python module this extension provides, it will be publicly available as "import maticodes.soundboard.window".
 [[python.module]]
-name = "maticodes.soundboard"
+name = "maticodes.soundboard.window"
 
 [settings]
-exts."maticodes.soundboard".button_width = 300
-exts."maticodes.soundboard".edit_mode = false
+exts."maticodes.soundboard.window".button_width = 300
+exts."maticodes.soundboard.window".edit_mode = false
 
 [[test]]
 # Extra dependencies only to be used during test run

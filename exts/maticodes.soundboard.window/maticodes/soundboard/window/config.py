@@ -1,4 +1,3 @@
-
 # SPDX-License-Identifier: Apache-2.0
 
 import copy
@@ -38,21 +37,24 @@ class ConfigManager:
         filepath = cls._resolve_path(filepath)
         if not os.path.exists(filepath):
             os.makedirs(os.path.dirname(filepath), exist_ok=True)
-            return
+        else:
+            data = cls._read_json(filepath)
+            cls.user_config = data
+        
+        if not cls.user_config:
+            cls.user_config = {"sounds_repo": {}}
 
-        data = cls._read_json(filepath)
-        cls.user_config = data
-    
+
     @classmethod
     def save_user_config(cls, filepath: Path):
         filepath = cls._resolve_path(filepath)
         with open(filepath, "w") as f:
             json.dump(cls.user_config, f, indent=4)
-    
+
     @classmethod
     def _resolve_path(cls, filepath):
         return carb.tokens.get_tokens_interface().resolve(str(filepath))
-    
+
     @classmethod
     def resolved_config(cls):
         resolved_config = {}
@@ -65,11 +67,11 @@ class ConfigManager:
 
 
 class TransientSettings:
-    EDIT_MODE = "/exts/maticodes.soundboard/edit_mode"
+    EDIT_MODE = "/exts/maticodes.soundboard.window/edit_mode"
 
 
 class PersistentSettings:
-    BUTTON_WIDTH = "/exts/maticodes.soundboard/button_width"
+    BUTTON_WIDTH = "/exts/maticodes.soundboard.window/button_width"
 
     @classmethod
     def get_persistent_keys(cls):
@@ -87,14 +89,13 @@ class SettingsManager:
     def __init__(self):
         self._settings = carb.settings.get_settings()
         self._load_settings()
-    
+
     def _load_settings(self):
         for key in PersistentSettings.get_persistent_keys():
             value = self._settings.get(self.PERSISTENT + key)
             if value is not None:
                 self._settings.set(key, value)
 
-    
     def save_settings(self):
         for key in PersistentSettings.get_persistent_keys():
             value = self._settings.get(key)
