@@ -23,6 +23,8 @@ class Soundboard(ui.Window):
         self.ext_id = ext_id
 
         self._sounds = {}
+        self._buttons_frame = None
+        self._slider_sub = None
         ConfigManager.load_default_config(self.ext_id)
         ConfigManager.load_user_config(USER_CONFIG_PATH)
         self._audio_iface = omni.kit.uiaudio.get_ui_audio_interface()
@@ -39,9 +41,8 @@ class Soundboard(ui.Window):
         self._sounds_changed_sub = bus.create_subscription_to_push_by_type(
             carb.events.type_from_string(SOUNDS_CHANGED_EVENT), self._on_sounds_changed
         )
-        self._slider_sub = None
         self.frame.set_build_fn(self._build_window)
-        self._buttons_frame = None
+        
 
     def _on_reorder(self, e):
         self._buttons_frame.rebuild()
@@ -131,7 +132,8 @@ class Soundboard(ui.Window):
         return self._audio_iface.create_sound(filepath)
 
     def _on_settings_changed(self, item, event_type):
-        self._buttons_frame.rebuild()
+        if self._buttons_frame:
+            self._buttons_frame.rebuild()
 
     def _on_ext_drag_drop(self, edd: ExternalDragDrop, payload: List[str]):
         paths = edd.expand_payload(payload)
@@ -156,6 +158,12 @@ class Soundboard(ui.Window):
             ConfigManager.user_config["sounds_repo"] = {}
         ConfigManager.user_config["sounds_repo"][sound_name] = {"uri": file_path}
 
+    def show(self):
+        self.visible = True
+
+    def hide(self):
+        self.visible = False
+    
     def destroy(self) -> None:
         self._slider_sub = None
         if self._settings_sub:
@@ -173,4 +181,7 @@ class Soundboard(ui.Window):
         if self._external_drag_and_drop:
             self._external_drag_and_drop.destroy()
             self._external_drag_and_drop = None
+        if self._buttons_frame:
+            self._buttons_frame.destroy()
+            self._buttons_frame = None
         super().destroy()
