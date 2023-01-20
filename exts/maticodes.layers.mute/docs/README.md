@@ -1,4 +1,3 @@
-# Python Extension Example [maticodes.layers.visibility]
+# Layers Mute Window [maticodes.layers.mute]
 
-This is an example of pure python Kit extension. It is intended to be copied and serve as a template to create new extensions.
-
+A simple extension showing how to create a UI to replicate the mute functionality of the Layers Window.
