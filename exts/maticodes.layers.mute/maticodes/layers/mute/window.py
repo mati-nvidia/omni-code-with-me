@@ -10,8 +10,10 @@ import omni.usd
 class LayerMuteWindow(ui.Window):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Using ui.Frame.set_build_fn() provides a function to be called with ui.Frame.rebuild()
         self.frame.set_build_fn(self.build_frame)
 
+        # Using the same interfaces as Layers window
         self.layers: usd_layers.Layers = usd_layers.get_layers()
         self.layers_state: usd_layers.LayersState = self.layers.get_layers_state()
 
@@ -34,6 +36,7 @@ class LayerMuteWindow(ui.Window):
                     ui.Label("There are currently no sublayers in this Stage.", alignment=ui.Alignment.CENTER)
                 for layer_id in layer_ids:
                     layer_name = self.layers_state.get_layer_name(layer_id)
+                    # Skip the root layer since it can't be muted.
                     if layer_name != "Root Layer":
                         is_muted = self.layers_state.is_layer_locally_muted(layer_id)
                         button = ui.Button(layer_name, height=25, checked=not is_muted)
@@ -41,12 +44,15 @@ class LayerMuteWindow(ui.Window):
 
     def _on_clicked(self, layer_id, button):
         button.checked = not button.checked
+        # Using the Kit command allows users to undo the change with Ctrl+Z
         omni.kit.commands.execute("SetLayerMuteness", layer_identifier=layer_id, muted=not button.checked)
 
     def _on_stage_opened(self, event: carb.events.IEvent):
+        # If user changes stages, rebuild the window with a new list of layers.
         self.frame.rebuild()
 
     def _on_layers_changed(self, event: carb.events.IEvent):
+         # If layers are added, removed or layer muteness changed.
         self.frame.rebuild()
 
     def destroy(self) -> None:
