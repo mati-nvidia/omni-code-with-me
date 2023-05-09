@@ -1,0 +1,171 @@
+# SPDX-License-Identifier: Apache-2.0
+
+Action Graph is built on OmniGraph. You can import the OmniGraph API using:
+import omni.graph.core as og
+
+The keys class contains common keys for issuing commands and the controller class is responsible for creating and editing graphs.
+keys = og.Controller.Keys  # Usually handy to keep this name short as it is used often
+controller = og.Controller()
+
+You must user the controller's edit function to create or edit graphs. You can create a graph like so:
+action_graph = og.GraphController.create_graph(
+    {
+        "graph_path": "/World/MyActionGraph",
+        "node_name": "MyActionGraph",
+        "evaluator_name": "execution",
+        "is_global_graph": True,
+        "backed_by_usd": True
+    }
+)
+
+If the graph at path /World/MyGraph doesn't exist, it will be created automatically.
+
+This is how you can create a node in the graph /World/MyGraph:
+_, _, _, _ = og.Controller.edit(
+    "/World/MyGraph",
+    {
+        keys.CREATE_NODES: [("MyNode", "omni.graph.test.TestAllDataTypes")]
+    },
+)
+"MyNode" is the name I am giving to that node instance and the node's type is "omni.graph.test.TestAllDataTypes". Node names cannot have spaces.
+
+This is how you can connect the output attribute of one node to the input attribute of another:
+_, _, _, _ = og.Controller.edit(
+    graph_id="/World/MyGraph",
+    edit_commands={
+        keys.CONNECT: [("/World/MyGraph/src.outputs:a_int", "/World/MyGraph/dst.inputs:b_int")],
+    }
+)
+
+"src" is the name of the first node and "dst" is the name of the second node. This command connects the "outputs:a_int" output attribute of "src" to the "inputs:b_int" input attribute of "dst". The "inputs" or "outputs" prefix in the attribute name does not qualify it as an input or output attribute. The node name and attribute name should be delimited by a period.
+
+Here is another example showing how to connect the output of a Constant node to another node:
+
+
+
+You can also set the value of an input attribute directly:
+_, _, _, _ = og.Controller.edit(
+    graph_id="/World/MyGraph",
+    edit_commands={
+        keys.SET_VALUES: [("/World/MyGraph/src.inputs:a_int", 5)],
+    }
+)
+Here, the "inputs:a_int" input attribute is being set to a value of 5.
+
+Nodes can have input and output attributes. The attributes have specific data types. You can treat the "token" data type as a "string". Here are some node types that you can create:
+
+{"node_types": [
+  {
+    "type": "omni.graph.nodes.ConstantInt",
+    "node_description": "A constant integer value.",
+    "outputs": [
+      {
+        "attribute_name": "inputs:value",
+        "data_type": "int",
+        "description": "The constant integer value."
+      }
+    ]
+  },
+  {
+    "type": "omni.graph.nodes.Add",
+    "node_description": "Adds two inputs together. It can accept many arbitrary types, but both inputs must match in type.",
+    "inputs": [
+      {
+        "attribute_name": "inputs:a",
+        "data_type": "any",
+        "description": "The first term to be added."
+      },
+      {
+        "attribute_name": "inputs:b",
+        "data_type": "any",
+        "description": "The second term to be added."
+      }
+    ],
+    "outputs": [
+      {
+        "attribute_name": "outputs:sum",
+        "data_type": "matches input",
+        "description": "The result of the addition equation"
+      }
+    ]
+  },
+  {
+    "type": "omni.graph.nodes.ToString",
+    "node_description": "Converts the input data to a string value.",
+    "inputs": [
+      {
+        "attribute_name": "inputs:value",
+        "data_type": "any",
+        "description": "The input data to convert"
+      }
+    ],
+    "outputs": [
+      {
+        "attribute_name": "outputs:converted",
+        "data_type": "string",
+        "description": "The string result of the conversion"
+      }
+    ]
+  },
+  {
+    "type": "omni.graph.ui.PrintText",
+    "node_description": "Prints the input text to the viewport or console.",
+    "inputs": [
+      {
+        "attribute_name": "inputs:execIn",
+        "data_type": "execution",
+        "description": "When True, this node is executed."
+      },
+      {
+        "attribute_name": "inputs:text",
+        "data_type": "string",
+        "description": "The text to print"
+      },
+      {
+        "attribute_name": "inputs:toScreen",
+        "data_type": "bool",
+        "description": "If True, prints to screen and console. If False, prints to console only"
+      }
+    ],
+    "outputs": [
+      {
+        "attribute_name": "outputs:execOut",
+        "data_type": "execution",
+        "description": "When True, tells the connected node to execute."
+      }
+    ]
+  },
+  {
+    "type": "omni.graph.action.OnStageEvent",
+    "node_description": "Outputs a execution signal whenever a stage event occurs.",
+    "inputs": [
+      {
+        "attribute_name": "inputs:eventName",
+        "data_type": "token",
+        "description": "The stage event type that the node is listening to know when to execute. Saved event occurs when the Stage is saved. Selection Changed event occurs when a prim is selected or deselected.OmniGraph Start Play occurs when the user presses the play button.OmniGraph Stop Play event occurs when the user presses the stop button."
+      }
+    ],
+    "outputs": [
+      {
+        "attribute_name": "outputs:execOut",
+        "data_type": "execution",
+        "description": "When the stage event occurs, tells the connected node to execute."
+      }
+    ]
+  }
+]}
+This is how you can connect the output attribute of a ConstantInt node to the input attribute of a ToString node:
+_, _, _, _ = og.Controller.edit(
+    graph_id="/World/MyGraph",
+    edit_commands={
+        keys.CONNECT: [("/World/MyGraph/myconst.inputs:value", "/World/MyGraph/tostring.inputs:value")],
+    }
+)
+
+That is everything you need to know about Action Graph. Now I want you to perform the following task:
+
+Create an action graph that calculates 5 + 2 and prints the result to the screen when the user presses the play button. Please use a single edit() call to create the graph.
+
+PROMPT: Provide python code to create an action graph that moves the prim at path /World/Cube to 0,100,0 using a speed of 1.0 when the user presses the play button. Please use a single edit() call to create the graph.
+
+
