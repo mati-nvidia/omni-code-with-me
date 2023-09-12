@@ -6,6 +6,11 @@ stage = Usd.Stage.CreateNew("test_arm.usda")
 
 xform: UsdGeom.Xform = UsdGeom.Xform.Define(stage, "/World")
 stage.SetDefaultPrim(xform.GetPrim())
+stage.SetStartTimeCode(1.0)
+stage.SetEndTimeCode(10.0)
+UsdGeom.SetStageMetersPerUnit(stage, 0.01)
+UsdGeom.SetStageUpAxis(stage, UsdGeom.Tokens.y)
+
 skel_root = UsdSkel.Root.Define(stage, "/World/Arm")
 
 # Create Mesh
@@ -56,14 +61,33 @@ rest_xforms = Vt.Matrix4dArray([
 skeleton.CreateRestTransformsAttr(rest_xforms)
 
 # TODO: Do I need to apply BindingAPI to skel root?
-binding_api1 = UsdSkel.BindingAPI.Apply(skel_root.GetPrim())
-binding_api2 = UsdSkel.BindingAPI.Apply(mesh.GetPrim())
-binding_api2.CreateSkeletonRel().AddTarget(skel_root.GetPath())
+binding_root = UsdSkel.BindingAPI.Apply(skel_root.GetPrim())
+binding_mesh = UsdSkel.BindingAPI.Apply(mesh.GetPrim())
+binding_skel = UsdSkel.BindingAPI.Apply(skeleton.GetPrim())
+binding_mesh.CreateSkeletonRel().SetTargets([skeleton.GetPath()])
 # This is index in joints property for each vertex.
-joint_indices = binding_api2.CreateJointIndicesPrimvar(False, 1)
+joint_indices = binding_mesh.CreateJointIndicesPrimvar(False, 1)
 joint_indices.Set([2,2,2,2, 0,0,0,0, 1,1,1,1])
-joint_weights = binding_api2.CreateJointWeightsPrimvar(False, 1)
+joint_weights = binding_mesh.CreateJointWeightsPrimvar(False, 1)
 joint_weights.Set([1,1,1,1, 1,1,1,1, 1,1,1,1])
+identity = Gf.Matrix4d().SetIdentity()
+binding_mesh.CreateGeomBindTransformAttr(identity)
 
+skel_anim = UsdSkel.Animation.Define(stage, skeleton.GetPath().AppendPath("Anim"))
+binding_skel.CreateAnimationSourceRel().SetTargets([skel_anim.GetPath()])
+skel_anim.CreateJointsAttr().Set(["Shoulder/Elbow"])
+skel_anim.CreateTranslationsAttr().Set(Vt.Vec3fArray([(0.0, 0.0, 2.0)]))
+skel_anim.CreateScalesAttr().Set(Vt.Vec3hArray([(1.0, 1.0, 1.0)]))
+rot_attr = skel_anim.CreateRotationsAttr()
+rot_anim = {
+    1: [(1.0,0.0,0.0,0.0)],
+    10: [(0.7071, 0.7071, 0.0, 0.0)]
+}
+for key in rot_anim:
+    values = rot_anim[key]
+    quats = []
+    for value in values:
+        quats.append(Gf.Quatf(*value))
+    rot_attr.Set(Vt.QuatfArray(quats), key)
 
 stage.Save()
